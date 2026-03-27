@@ -40,7 +40,7 @@
 
 ## 📸 界面截图
 
-![岗位分析](screenshot.png)
+<img width="2532" height="1351" alt="image" src="https://github.com/user-attachments/assets/e94d6803-e062-43f2-a8d7-69d4871c7640" />
 
 ---
 
