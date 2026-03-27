@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 求职助手</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Microsoft YaHei', sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-bottom: 1px solid #2a2a4a; padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; }
+  .header-left h1 { font-size: 22px; color: #7c8cf8; font-weight: 700; }
+  .header-left p { font-size: 13px; color: #888; margin-top: 2px; }
+  .badge { background: linear-gradient(135deg, #7c8cf8, #a78bfa); color: white; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+  .api-bar { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+  .api-bar label { font-size: 13px; color: #888; white-space: nowrap; }
+  .api-bar input { flex: 1; background: #0f0f1a; border: 1px solid #2a2a4a; border-radius: 8px; padding: 8px 14px; color: #e0e0e0; font-size: 13px; outline: none; }
+  .api-bar input:focus { border-color: #7c8cf8; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab { padding: 10px 24px; border-radius: 10px; border: 1px solid #2a2a4a; background: #1a1a2e; color: #888; cursor: pointer; font-size: 13px; font-family: 'Microsoft YaHei', sans-serif; transition: all 0.2s; }
+  .tab.active { background: linear-gradient(135deg, #7c8cf8, #a78bfa); color: white; border-color: transparent; }
+  .tab:hover:not(.active) { color: #ccc; border-color: #7c8cf8; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 16px; padding: 24px; }
+  .card h2 { font-size: 15px; color: #7c8cf8; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  textarea { width: 100%; background: #0f0f1a; border: 1px solid #2a2a4a; border-radius: 10px; padding: 14px; color: #e0e0e0; font-size: 13px; line-height: 1.7; resize: vertical; outline: none; font-family: 'Microsoft YaHei', sans-serif; }
+  textarea:focus { border-color: #7c8cf8; }
+  .btn-row { display: flex; gap: 12px; margin: 20px 0; }
+  .btn { flex: 1; padding: 14px; border-radius: 10px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; font-family: 'Microsoft YaHei', sans-serif; transition: all 0.2s; }
+  .btn-primary { background: linear-gradient(135deg, #7c8cf8, #a78bfa); color: white; }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: #2a2a4a; color: #aaa; }
+  .btn-secondary:hover { background: #3a3a5a; color: #fff; }
+  .result-card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 16px; padding: 28px; display: none; }
+  .result-card.show { display: block; }
+  .result-card > h3 { font-size: 15px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #2a2a4a; }
+  .result-content { font-size: 13px; line-height: 1.9; color: #ccc; }
+  .result-content h3 { color: #a78bfa; font-size: 14px; font-weight: 700; margin: 16px 0 8px; }
+  .result-content h4 { color: #7c8cf8; font-size: 13px; font-weight: 700; margin: 12px 0 6px; }
+  .result-content strong { color: #e8e8e8; font-weight: 700; }
+  .result-content ul { padding-left: 20px; margin: 8px 0; }
+  .result-content ol { padding-left: 20px; margin: 8px 0; }
+  .result-content li { margin: 5px 0; }
+  .result-content p { margin: 8px 0; }
+  .result-content hr { border: none; border-top: 1px solid #2a2a4a; margin: 14px 0; }
+  .loading { display: none; text-align: center; padding: 40px; color: #7c8cf8; }
+  .loading.show { display: block; }
+  .spinner { width: 36px; height: 36px; border: 3px solid #2a2a4a; border-top-color: #7c8cf8; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error { background: #2a1a1a; border: 1px solid #5a2a2a; border-radius: 10px; padding: 14px 18px; color: #f87c7c; font-size: 13px; margin-top: 12px; display: none; }
+  .error.show { display: block; }
+  .tips { background: #1a2a1a; border: 1px solid #2a4a2a; border-radius: 10px; padding: 12px 16px; font-size: 12px; color: #7abf7a; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>🤖 AI 求职助手</h1>
+    <p>简历诊断 · 岗位匹配 · 面试题生成</p>
+  </div>
+  <span class="badge">Powered by DeepSeek</span>
+</div>
+
+<div class="container">
+
+  <div class="api-bar">
+    <label>🔑 DeepSeek API Key：</label>
+    <input type="password" id="apiKey" placeholder="sk-xxxxxxxxxxxxxxxx" />
+    <span style="font-size:12px;color:#666;">本地运行，Key 不会上传</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('analyze')">🔍 岗位分析</button>
+    <button class="tab" onclick="switchTab('resume')">📝 简历优化</button>
+    <button class="tab" onclick="switchTab('interview')">🎯 面试备考</button>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <h2>👤 我的简历内容（三个功能共用，填一次即可）</h2>
+    <textarea id="resumeText" rows="8" placeholder="把你的简历内容粘贴到这里，例如：
+
+姓名：张三 | 学校：上海大学 | 专业：信息管理与信息系统 | 年级：大二
+
+【技能】Python基础、SQL、Excel、Tableau
+【项目经历】
+- 上海租房市场数据分析：使用Python/Pandas对500条数据进行清洗与可视化，输出4张分析图表
+- 互联网招聘数据分析：爬取招聘数据，分析薪资分布与热门技能，生成词云图
+【获奖/证书】英语六级、计算机二级
+【求职意向】数据分析师、产品助理（实习）"></textarea>
+    <div class="tips">💡 填得越详细，三个功能的分析越精准。建议把简历里的所有内容都粘贴进来。</div>
+  </div>
+
+  <!-- 面板1：岗位分析 -->
+  <div id="panel-analyze" class="panel active">
+    <div class="grid-2">
+      <div class="card">
+        <h2>📋 岗位描述（JD）</h2>
+        <textarea id="jobDesc1" rows="10" placeholder="粘贴招聘网站上的完整岗位描述..."></textarea>
+      </div>
+      <div class="card">
+        <h2>🏢 公司信息（选填）</h2>
+        <textarea id="companyInfo1" rows="10" placeholder="填写公司相关信息，例如：
+
+公司名称：字节跳动
+行业：互联网/内容平台
+规模：大厂
+主要产品：抖音、今日头条
+（可从官网或招聘页面复制）"></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn1" onclick="runAnalyze()">🚀 开始分析</button>
+      <button class="btn btn-secondary" onclick="clearPanel('analyze')">🗑️ 清空</button>
+    </div>
+    <div class="error" id="err1"></div>
+    <div class="loading" id="load1"><div class="spinner"></div><p>AI 分析中...</p></div>
+    <div id="result1" style="margin-top:20px;display:flex;flex-direction:column;gap:20px;"></div>
+  </div>
+
+  <!-- 面板2：简历优化 -->
+  <div id="panel-resume" class="panel">
+    <div class="card" style="margin-bottom:20px;">
+      <h2>📋 目标岗位 JD</h2>
+      <textarea id="jobDesc2" rows="8" placeholder="粘贴你想投递的岗位描述..."></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn2" onclick="runResume()">✨ 生成简历优化建议</button>
+      <button class="btn btn-secondary" onclick="clearPanel('resume')">🗑️ 清空</button>
+    </div>
+    <div class="error" id="err2"></div>
+    <div class="loading" id="load2"><div class="spinner"></div><p>AI 优化中...</p></div>
+    <div id="result2" style="margin-top:20px;display:flex;flex-direction:column;gap:20px;"></div>
+  </div>
+
+  <!-- 面板3：面试备考 -->
+  <div id="panel-interview" class="panel">
+    <div class="card" style="margin-bottom:20px;">
+      <h2>📋 目标岗位 JD</h2>
+      <textarea id="jobDesc3" rows="8" placeholder="粘贴你想投递的岗位描述..."></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn3" onclick="runInterview()">🎯 生成面试题 + 参考答案</button>
+      <button class="btn btn-secondary" onclick="clearPanel('interview')">🗑️ 清空</button>
+    </div>
+    <div class="error" id="err3"></div>
+    <div class="loading" id="load3"><div class="spinner"></div><p>AI 生成中...</p></div>
+    <div id="result3" style="margin-top:20px;display:flex;flex-direction:column;gap:20px;"></div>
+  </div>
+
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['analyze','resume','interview'][i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+}
+
+function getKey() { return document.getElementById('apiKey').value.trim(); }
+function getResume() { return document.getElementById('resumeText').value.trim(); }
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = '❌ ' + msg;
+  el.className = 'error show';
+}
+function clearError(id) { document.getElementById(id).className = 'error'; }
+
+function renderMarkdown(text) {
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^# (.+)$/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^---+$/gm, '<hr>')
+    .replace(/^[-•] (.+)$/gm, '<li>$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)(\n<li>[\s\S]*?<\/li>)*/g, m => `<ul>${m}</ul>`)
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+}
+
+function makeCard(title, color, content) {
+  return `
+    <div class="result-card show">
+      <h3 style="color:${color}">${title}</h3>
+      <div class="result-content"><p>${renderMarkdown(content.trim())}</p></div>
+    </div>`;
+}
+
+async function callAI(prompt) {
+  const resp = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getKey()}` },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 3500,
+      temperature: 0.7
+    })
+  });
+  if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || resp.status); }
+  const data = await resp.json();
+  return data.choices[0].message.content;
+}
+
+// 功能1：岗位分析
+async function runAnalyze() {
+  clearError('err1');
+  const key = getKey(), jd = document.getElementById('jobDesc1').value.trim();
+  const company = document.getElementById('companyInfo1').value.trim();
+  const resume = getResume();
+  if (!key) { showError('err1','请填写 API Key'); return; }
+  if (!jd) { showError('err1','请填写岗位描述'); return; }
+
+  document.getElementById('btn1').disabled = true;
+  document.getElementById('load1').className = 'loading show';
+  document.getElementById('result1').innerHTML = '';
+
+  const resumePart = resume ? `\n\n我的简历：\n${resume}` : '';
+  const companyPart = company ? `\n\n公司信息：\n${company}` : '';
+
+  const prompt = `你是专业求职顾问。请分析以下岗位${resume?'并结合求职者简历':''}，输出三部分，用===SEP===分隔：
+
+岗位JD：${jd}${companyPart}${resumePart}
+
+第一部分【岗位解析】：
+1. 核心职责（3条简洁描述）
+2. 必备技能关键词
+3. 隐藏要求（从JD字里行间读出的潜台词）
+4. 岗位难度评级（适合应届/需要经验/高级）
+${company ? '5. 公司文化匹配点' : ''}
+
+===SEP===
+
+第二部分【匹配度分析】：
+${resume ? '根据简历内容，分析与该岗位的匹配程度：\n1. 优势点（简历中哪些经历/技能与JD高度匹配）\n2. 差距点（JD要求但简历中缺少的）\n3. 综合匹配度评分（0-100分）及理由' : '（未提供简历，请在上方填写简历后重新分析）'}
+
+===SEP===
+
+第三部分【投递建议】：
+1. 是否建议投递（给出明确建议）
+2. 投递前需要补充/准备的内容
+3. 投递时机建议`;
+
+  try {
+    const text = await callAI(prompt);
+    const parts = text.split('===SEP===');
+    const colors = ['#7c8cf8','#a78bfa','#60d394'];
+    const titles = ['🔍 岗位解析','📊 匹配度分析','💡 投递建议'];
+    document.getElementById('result1').innerHTML =
+      parts.slice(0,3).map((p,i) => makeCard(titles[i], colors[i], p)).join('');
+  } catch(e) {
+    showError('err1', '分析失败：' + e.message);
+  } finally {
+    document.getElementById('btn1').disabled = false;
+    document.getElementById('load1').className = 'loading';
+  }
+}
+
+// 功能2：简历优化
+async function runResume() {
+  clearError('err2');
+  const key = getKey(), jd = document.getElementById('jobDesc2').value.trim(), resume = getResume();
+  if (!key) { showError('err2','请填写 API Key'); return; }
+  if (!jd) { showError('err2','请填写岗位描述'); return; }
+  if (!resume) { showError('err2','请在上方填写你的简历内容'); return; }
+
+  document.getElementById('btn2').disabled = true;
+  document.getElementById('load2').className = 'loading show';
+  document.getElementById('result2').innerHTML = '';
+
+  const prompt = `你是顶级简历优化师。请根据我的简历和目标岗位JD，提供深度优化建议。
+
+我的简历：
+${resume}
+
+目标岗位JD：
+${jd}
+
+请输出以下内容，用===SEP===分隔：
+
+第一部分【推荐项目/经历排序】：
+从我的简历中，找出最适合这个岗位的项目或经历，按匹配度从高到低排序，并说明每个为什么适合放在简历靠前位置。格式：
+排名1：[项目名] - 匹配理由：...  建议描述方式：...
+排名2：...
+
+===SEP===
+
+第二部分【简历逐条优化】：
+针对我简历中的每个项目/经历，给出具体的改写建议。用"原文→优化后"的格式，让描述更符合JD关键词、更有数据支撑、更突出价值。
+
+===SEP===
+
+第三部分【补充建议】：
+1. 简历中缺少但JD要求的技能/经历，建议如何快速补充
+2. 简历整体结构调整建议
+3. 关键词优化（哪些词要加进去，哪些可以删掉）`;
+
+  try {
+    const text = await callAI(prompt);
+    const parts = text.split('===SEP===');
+    const colors = ['#f0a500','#7c8cf8','#60d394'];
+    const titles = ['⭐ 推荐经历排序（最适合此岗位）','✏️ 简历逐条优化建议','🔧 补充与结构建议'];
+    document.getElementById('result2').innerHTML =
+      parts.slice(0,3).map((p,i) => makeCard(titles[i], colors[i], p)).join('');
+  } catch(e) {
+    showError('err2','失败：' + e.message);
+  } finally {
+    document.getElementById('btn2').disabled = false;
+    document.getElementById('load2').className = 'loading';
+  }
+}
+
+// 功能3：面试备考
+async function runInterview() {
+  clearError('err3');
+  const key = getKey(), jd = document.getElementById('jobDesc3').value.trim(), resume = getResume();
+  if (!key) { showError('err3','请填写 API Key'); return; }
+  if (!jd) { showError('err3','请填写岗位描述'); return; }
+  if (!resume) { showError('err3','请在上方填写你的简历内容'); return; }
+
+  document.getElementById('btn3').disabled = true;
+  document.getElementById('load3').className = 'loading show';
+  document.getElementById('result3').innerHTML = '';
+
+  const prompt = `你是经验丰富的面试官和求职教练。根据以下简历和岗位JD，生成最可能被问到的面试题，并给出个性化的参考答案。
+
+我的简历：
+${resume}
+
+岗位JD：
+${jd}
+
+请输出以下内容，用===SEP===分隔：
+
+第一部分【专业技能题（3题）】：
+针对JD要求的技术/专业能力出题，每题包含：
+Q：问题
+【考察点】：面试官真正想了解什么
+【参考答案】：结合我的简历背景，给出具体的回答（200字左右）
+
+===SEP===
+
+第二部分【项目/经历题（3题）】：
+针对我简历中的项目经历出题（STAR法则），每题包含：
+Q：问题
+【考察点】：...
+【参考答案】：用STAR结构（情境-任务-行动-结果）给出具体回答，直接引用我简历中的项目
+
+===SEP===
+
+第三部分【综合/压力题（3题）】：
+包含行为面试题和压力测试题，每题包含：
+Q：问题
+【考察点】：...
+【参考答案】：结合我的背景给出真实、有说服力的回答`;
+
+  try {
+    const text = await callAI(prompt);
+    const parts = text.split('===SEP===');
+    const colors = ['#7c8cf8','#a78bfa','#f87c7c'];
+    const titles = ['💻 专业技能题','📁 项目经历题','🔥 综合压力题'];
+    document.getElementById('result3').innerHTML =
+      parts.slice(0,3).map((p,i) => makeCard(titles[i], colors[i], p)).join('');
+  } catch(e) {
+    showError('err3','失败：' + e.message);
+  } finally {
+    document.getElementById('btn3').disabled = false;
+    document.getElementById('load3').className = 'loading';
+  }
+}
+
+function clearPanel(name) {
+  if (name==='analyze') { document.getElementById('jobDesc1').value=''; document.getElementById('companyInfo1').value=''; document.getElementById('result1').innerHTML=''; }
+  if (name==='resume') { document.getElementById('jobDesc2').value=''; document.getElementById('result2').innerHTML=''; }
+  if (name==='interview') { document.getElementById('jobDesc3').value=''; document.getElementById('result3').innerHTML=''; }
+}
+</script>
+</body>
+</html>
